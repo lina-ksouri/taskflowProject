@@ -1,0 +1,22 @@
+# Profil de test : base H2 en mémoire (mode PostgreSQL) et AUCUN Keycloak.
+# Les URLs ci-dessous ne sont jamais contactées : les tests fournissent leurs propres jetons.
+spring:
+  datasource:
+    url: jdbc:h2:mem:taskflow;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  flyway:
+    enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak.invalid/realms/taskflow
+          jwk-set-uri: http://keycloak.invalid/realms/taskflow/protocol/openid-connect/certs
+
+app:
+  cors:
+    allowed-origins: http://localhost:5173
