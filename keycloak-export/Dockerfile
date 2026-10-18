@@ -17,7 +17,7 @@ FROM quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}
 COPY --from=builder /opt/keycloak/ /opt/keycloak/
 # Le realm est lu au démarrage grâce à l'option --import-realm (dossier data/import).
 # Les ${FRONTEND_URL} qu'il contient sont remplacés par la variable d'environnement du même nom.
-COPY --chown=1000:0 realm-taskflow.json /opt/keycloak/data/import/taskflow-realm.json
+COPY --chown=1000:0 taskflow-realm.json /opt/keycloak/data/import/taskflow-realm.json
 COPY --from=scripts /scripts/ /opt/keycloak/
 ENV KC_DB=postgres \
     KC_HEALTH_ENABLED=true
