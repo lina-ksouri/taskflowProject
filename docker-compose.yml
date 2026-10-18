@@ -1,0 +1,97 @@
+# Lance TaskFlow en entier : docker compose up --build
+# Les valeurs viennent du fichier .env (copie de .env.example, jamais versionné).
+name: TaskFolw
+
+services:
+  # ---------- Base de données ----------
+  # Hébergement gratuit = une seule base : Keycloak et l'API y stockent chacun leurs tables.
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB manquant, copiez .env.example en .env}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER manquant, copiez .env.example en .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD manquant, copiez .env.example en .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"      # accessible seulement depuis votre machine
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  # ---------- Identité : Keycloak (le realm "taskflow" est importé au premier démarrage) ----------
+  keycloak:
+    build: ./keycloak-export
+    restart: unless-stopped
+    environment:
+      KC_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      KC_DB_USERNAME: ${POSTGRES_USER}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KC_HOSTNAME: ${KEYCLOAK_PUBLIC_URL:?KEYCLOAK_PUBLIC_URL manquant}
+      KC_HTTP_ENABLED: "true"      # HTTP autorisé en local (en ligne, le HTTPS est assuré par la plateforme)
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:?KEYCLOAK_ADMIN manquant}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD manquant}
+      FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL manquant}   # injecté dans le realm (redirections autorisées)
+    ports:
+      - "8180:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/opt/keycloak/healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  # ---------- API Spring Boot ----------
+  api:
+    build: ./taskflowBack
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      # Valeur du claim "iss" des jetons = adresse publique de Keycloak
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_PUBLIC_URL}/realms/taskflow
+      # Mais l'API, dans le réseau Docker, télécharge les clés par l'adresse interne
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/taskflow/protocol/openid-connect/certs
+      CORS_ALLOWED_ORIGINS: ${FRONTEND_URL}
+      # La base est partagée avec Keycloak : Flyway doit accepter un schéma déjà utilisé
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
+      SPRING_FLYWAY_BASELINE_VERSION: "0"
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+
+  # ---------- Frontend Vue (servi par nginx) ----------
+  frontend:
+    build:
+      context: ./taskflow-front
+      args:
+        VITE_KEYCLOAK_URL: ${KEYCLOAK_PUBLIC_URL}
+        VITE_KEYCLOAK_REALM: taskflow
+        VITE_KEYCLOAK_CLIENT_ID: taskflow-front
+        VITE_API_URL: ${API_PUBLIC_URL:?API_PUBLIC_URL manquant}
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+
+volumes:
+  pgdata:

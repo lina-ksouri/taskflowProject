@@ -1,0 +1,8 @@
+# Les scripts et fichiers de configuration lus par Linux doivent garder des fins de ligne LF,
+# même quand Git est utilisé sous Windows (sinon : "bad interpreter" au démarrage des conteneurs).
+* text=auto
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf

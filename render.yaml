@@ -1,0 +1,92 @@
+# Blueprint Render : décrit toute l'infrastructure en ligne (Render > New > Blueprint).
+# Aucun secret ici : les valeurs "sync: false" sont saisies dans le tableau de bord Render,
+# les mots de passe sont générés par Render (generateValue) ou fournis par la base (fromDatabase).
+#
+# IMPORTANT : les noms de services doivent être uniques sur tout Render pour que les adresses
+# https://<nom>.onrender.com soient celles prévues. Si un nom est pris, changez-le ici
+# ET dans les variables "sync: false" ci-dessous.
+
+databases:
+  - name: taskflow-db
+    plan: free
+    databaseName: taskflow
+    user: taskflow
+    ipAllowList: []          # accès externe fermé : seuls les services Render y accèdent
+
+services:
+  # ---------- Keycloak ----------
+  - type: web
+    name: taskflow-keycloak-lina
+    runtime: docker
+    plan: free
+    dockerfilePath: ./keycloak-export/Dockerfile
+    dockerContext: ./keycloak-export
+    healthCheckPath: /realms/taskflow
+    autoDeployTrigger: checksPass      # déploiement seulement si la CI GitHub est verte
+    envVars:
+      - key: DATABASE_URL              # parsée par keycloak/entrypoint.sh
+        fromDatabase:
+          name: taskflow-db
+          property: connectionString
+      - key: KC_HOSTNAME               # ex. https://taskflow-keycloak.onrender.com
+        sync: false
+      - key: FRONTEND_URL              # ex. https://taskflow-front.onrender.com
+        sync: false
+      - key: KC_HTTP_ENABLED
+        value: "true"
+      - key: KC_PROXY_HEADERS
+        value: xforwarded
+      - key: KC_BOOTSTRAP_ADMIN_USERNAME
+        value: admin
+      - key: KC_BOOTSTRAP_ADMIN_PASSWORD
+        generateValue: true
+      - key: JAVA_OPTS_KC_HEAP
+        value: "-Xms128m -Xmx380m"
+
+  # ---------- API Spring Boot ----------
+  - type: web
+    name: taskflow-api-lina
+    runtime: docker
+    plan: free
+    dockerfilePath: ./taskflowBack/Dockerfile
+    dockerContext: ./taskflowBack
+    healthCheckPath: /actuator/health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: DATABASE_URL              # parsée par docker-entrypoint.sh
+        fromDatabase:
+          name: taskflow-db
+          property: connectionString
+      - key: KEYCLOAK_ISSUER_URI       # ex. https://taskflow-keycloak.onrender.com/realms/taskflow
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS      # ex. https://taskflow-front.onrender.com
+        sync: false
+      - key: SPRING_FLYWAY_BASELINE_ON_MIGRATE
+        value: "true"
+      - key: SPRING_FLYWAY_BASELINE_VERSION
+        value: "0"
+      - key: JAVA_OPTS
+        value: "-Xmx300m -XX:+UseSerialGC"
+
+  # ---------- Frontend Vue (site statique, HTTPS fourni par Render) ----------
+  - type: web
+    name: taskflow-front-lina
+    runtime: static
+    buildCommand: cd taskflow-front && npm ci && npm run build
+    staticPublishPath: ./taskflow-front/dist
+    autoDeployTrigger: checksPass
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: VITE_KEYCLOAK_URL         # ex. https://taskflow-keycloak.onrender.com
+        sync: false
+      - key: VITE_KEYCLOAK_REALM
+        value: taskflow
+      - key: VITE_KEYCLOAK_CLIENT_ID
+        value: taskflow-front
+      - key: VITE_API_URL              # ex. https://taskflow-api.onrender.com
+        sync: false
