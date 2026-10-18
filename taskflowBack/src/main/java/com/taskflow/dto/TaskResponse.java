@@ -9,16 +9,16 @@ import java.util.UUID;
 
 /** Ce que l'API renvoie : l'entité n'est jamais exposée directement. */
 public record TaskResponse(
-        UUID id,
-        String title,
+        UUID identifiant,
+        String titre,
         String description,
-        Priority priority,
-        LocalDate dueDate,
-        boolean completed,
+        Priority priorite,
+        LocalDate dateEcheance,
+        boolean estTermine,
         boolean overdue,       // calculé : non terminée et échéance dépassée
         String ownerId,
-        String ownerName,
-        LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        String proprietaire,
+        LocalDateTime dateCreation,
+        LocalDateTime dateMiseAJour
 ) {
 }

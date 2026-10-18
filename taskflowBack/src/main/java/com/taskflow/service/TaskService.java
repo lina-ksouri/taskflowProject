@@ -153,10 +153,10 @@ public class TaskService {
 
     /** Copie les champs modifiables d'une requête vers l'entité (le propriétaire n'est jamais touché). */
     static void apply(TaskRequest req, Task t) {
-        t.setTitre(req.title().trim());
+        t.setTitre(req.titre().trim());
         t.setDescription(req.description());
-        t.setPriorite(req.priority() != null ? req.priority() : Priority.NORMALE);
-        t.setDateEcheance(req.dueDate());
+        t.setPriorite(req.priorite() != null ? req.priorite() : Priority.NORMALE);
+        t.setDateEcheance(req.dateEcheance());
     }
 
 
