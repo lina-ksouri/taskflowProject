@@ -93,7 +93,7 @@ public class TaskController {
     @Tag(name = "Administration")
     @Operation(summary = "Toutes les tâches, paginées, filtrables par propriétaire")
     public PageResponse<TaskResponse> adminList(
-            @Parameter(description = "Identifiant (sub) du propriétaire") @RequestParam(required = false) String ownerId,
+            @Parameter(description = "Identifiant (sub) du propriétaire") @RequestParam(name = "owner",required = false) String ownerId,
             @RequestParam(required = false) Boolean completed,
             @RequestParam(required = false) Priority priority,
             @RequestParam(required = false) String sortBy,

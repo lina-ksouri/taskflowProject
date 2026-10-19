@@ -113,7 +113,7 @@ public class TaskService {
                                               String sortBy, String direction, int page, int size) {
         Specification<Task> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
-            if (ownerId != null && !ownerId.isEmpty()) predicates.add(cb.equal(root.get("ownerId"), ownerId));
+            if (ownerId != null && !ownerId.isEmpty()) predicates.add(cb.equal(root.get("proprietaire"), ownerId));
             if (completed != null) predicates.add(cb.equal(root.get("estTermine"), completed));
             if (priority != null) predicates.add(cb.equal(root.get("priorite"), priority));
             return cb.and(predicates.toArray(new Predicate[0]));
