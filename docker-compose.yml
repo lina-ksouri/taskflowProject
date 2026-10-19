@@ -1,6 +1,6 @@
 # Lance TaskFlow en entier : docker compose up --build
 # Les valeurs viennent du fichier .env (copie de .env.example, jamais versionné).
-name: TaskFolw
+name: taskflow
 
 services:
   # ---------- Base de données ----------

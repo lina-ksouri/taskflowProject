@@ -1,6 +1,6 @@
 server:
   port: ${PORT:8081}
- 
+
 spring:
   application:
     name: taskflowBack
@@ -22,13 +22,13 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI}
-          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:${KEYCLOAK_ISSUER_URI}/protocol/openid-connect/certs}
- 
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/taskflow}
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/taskflow}/protocol/openid-connect/certs}
+
 app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
- 
+
 management:
   endpoints:
     web:
@@ -38,7 +38,7 @@ management:
     health:
       probes:
         enabled: true
- 
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
