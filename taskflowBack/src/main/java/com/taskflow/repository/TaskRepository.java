@@ -45,4 +45,11 @@ public interface TaskRepository extends JpaRepository<Task, UUID>, JpaSpecificat
         order by max(task.proprietaire)""")
     List<Object[]> statsByUser(@Param("today") LocalDate today);
 
+    @Query("""
+    SELECT DISTINCT task.ownerId
+    FROM Task task
+    WHERE LOWER(task.proprietaire) = LOWER(:owner)
+""")
+    List<String> findOwnerIdsByName(@Param("owner") String owner);
+
 }

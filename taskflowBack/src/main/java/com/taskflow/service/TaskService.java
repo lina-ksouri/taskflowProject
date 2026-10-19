@@ -37,7 +37,7 @@ public class TaskService {
 
     public PageResponse<TaskResponse> listMine(AuthenticatedUser user, Boolean completed, Priority priority,
                                                String sortBy, String direction, int page, int size) {
-        return search(user.id(), completed, priority, sortBy, direction, page, size);
+        return search(List.of(user.id()), completed, priority, sortBy, direction, page, size);
     }
 
     public TaskResponse getMine(AuthenticatedUser user, UUID id) {
@@ -82,9 +82,21 @@ public class TaskService {
 
     // ---------- Espace administrateur : toutes les tâches ----------
 
-    public PageResponse<TaskResponse> listAll(String ownerId, Boolean completed, Priority priority,
+    public PageResponse<TaskResponse> listAll(String owner, Boolean completed, Priority priority,
                                               String sortBy, String direction, int page, int size) {
-        return search(ownerId, completed, priority, sortBy, direction, page, size);
+        List<String> ownerIds = new ArrayList<>();
+
+        if (owner != null && !owner.isBlank()) {
+            List<String> ids = repository.findOwnerIdsByName(owner.trim());
+
+            if (!ids.isEmpty()) {
+                ownerIds = ids;
+            } else {
+                // Ken owner mawjoud directement comme ID
+                ownerIds.add(owner.trim());
+            }
+        }
+        return search(ownerIds, completed, priority, sortBy, direction, page, size);
     }
 
     @Transactional
@@ -109,11 +121,11 @@ public class TaskService {
                 .orElseThrow(() -> new ResourceNotFoundException("Tâche " + id + " introuvable"));
     }
 
-    private PageResponse<TaskResponse> search(String ownerId, Boolean completed, Priority priority,
+    private PageResponse<TaskResponse> search(List<String> ownerIds, Boolean completed, Priority priority,
                                               String sortBy, String direction, int page, int size) {
         Specification<Task> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
-            if (ownerId != null && !ownerId.isEmpty()) predicates.add(cb.equal(root.get("proprietaire"), ownerId));
+            if (ownerIds != null && !ownerIds.isEmpty()) predicates.add(root.get("ownerId").in(ownerIds));
             if (completed != null) predicates.add(cb.equal(root.get("estTermine"), completed));
             if (priority != null) predicates.add(cb.equal(root.get("priorite"), priority));
             return cb.and(predicates.toArray(new Predicate[0]));
