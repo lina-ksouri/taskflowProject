@@ -8,11 +8,9 @@ COPY src ./src
 RUN mvn -B -q -DskipTests package
 
 # ---- Étape 2 : image d'exécution légère, sans root ----
-FROM eclipse-temurin:17-jre
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd --system --no-create-home appuser
+# Variante Alpine : wget (BusyBox) est déjà inclus, donc aucun apt-get ni téléchargement de paquets à la construction.
+FROM eclipse-temurin:17-jre-alpine
+RUN adduser -S -H appuser
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
@@ -27,6 +25,6 @@ EXPOSE 8081
 
 # Health check de l'API (inclut la connexion à la base de données)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=5 \
-  CMD curl -fsS "http://localhost:${PORT:-8081}/actuator/health" || exit 1
+    CMD wget -q -O /dev/null "http://127.0.0.1:${PORT:-8081}/actuator/health" || exit 1
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
